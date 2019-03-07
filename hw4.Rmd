@@ -1,0 +1,104 @@
+---
+title: "hw4"
+author: Samuel Cole
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+
+```
+1. Get a frequency breakdown of the number of chicks, their average weight and the standard deviation of the weights in each of the diets at the start of the study. Store the resulting data frame in a variable named weight0 and print.
+```{r}
+weight0 <- ChickWeight %>% group_by(Diet) %>% summarize(n = n(), meanweight = mean(weight, na.rm = TRUE), standard_deviation_weight = sd(weight, na.rm = TRUE))
+
+weight0
+
+```
+2. Each chick should have twelve weight measurements. Use the dplyr package to identify how many measurements are there for each chick. Extract a subset of the data for all chicks with complete information, name the data set complete, and print the first 3 rows. (Hint: you might want to use mutate to introduce a helper variable consisting of the number of observations)
+```{r}
+complete <- ChickWeight %>% group_by(Chick) %>% mutate(n = n()) %>% filter(n() == 12)
+```
+3. In the complete data set introduce a new variable that measures the current weight difference compared to day 0. Name this variable weightgain and print the first 3 rows of the new data frame.
+```{r}
+weightgain <- complete %>% 
+  group_by(Chick) %>%
+  mutate(weightgain = weight[Time == Time] - weight[Time == 0])
+head(weightgain, 3)
+
+```
+
+
+
+4. Use {ggplot2} to create side-by-side boxplots of weightgain by Diet for day 21. Describe the relationship in 2-3 sentences. Change the order of the categories in the Diet variable such that the boxplots are ordered by median weightgain, and the lower limit of the y axis should be 0.
+```{r}
+ggplot(weightgain, aes(x=reorder(Diet, weightgain, median), y=(weightgain)))+geom_boxplot() + expand_limits(y=0)+
+        ylab("Weight Gain (Grams)")+
+        xlab("Diets")+
+        ggtitle("Weight Gain by Diets") 
+```
+5. Answer the following question using numerical and graphical summary: Which chick gained the most weight and which gained the least weight? What diets were they on?
+```{r}
+OverallGain <- weightgain[(weightgain$Time==21),]
+a <- arrange(OverallGain, desc(weightgain))
+head(a,1)
+```
+This shows that the biggest weight gain through the entire 21 days of the study is 332 by Chick 35 which is on diet 3.
+```{r}
+b <- arrange(OverallGain, desc(-weightgain))
+head(b,1)
+```
+This shows that the lowest weight gain during the 21 days is 32, by Chick 24, which was on diet 2.
+```{r}
+ggplot(OverallGain, aes(x=reorder(Chick, weightgain), y=weightgain)) + geom_point() +
+        ylab("Weight Gain (grams)")+
+        xlab("Chick")+
+        ggtitle("Weight Gain by Chick") 
+```
+You can easily look at this graph and see that the lowest weight gain was by chick 24 and the largest weight gain was by chick 35.
+
+
+6. For the chicks with the least and the most weight at time 0, plot their growth trajectories over time. 
+5 pts of extra credit: Add to the plot the average growth trajectory for all chicks (calculated as the mean weight for each chick at each time). How do the trajectories compare?
+```{r}
+WeightAtTime0 <- weightgain[(weightgain$Time==0),]
+c <- arrange(WeightAtTime0, desc(-weight))
+head(c,1)
+```
+Chick 27 is lowest at time 0 with a weight of 39.
+```{r}
+d <- arrange(WeightAtTime0, desc(weight))
+head(d,1)
+```
+Chick 3 is the most at time 0 with a weight of 43.
+```{r}
+MostAndLeastAtBirth <- weightgain[(weightgain$Chick==3 | weightgain$Chick==27),]
+
+ggplot(MostAndLeastAtBirth, aes(x=Time, y=weightgain, color = Chick)) + geom_point() +
+        ylab("Weight Gain (grams)")+
+        xlab("Time (days)")+
+        ggtitle("Weight Gain by Time for Least and Most Weight at Birth") + scale_color_manual((breaks = c("3", "23")), values=c("red", "blue"))+ theme(legend.title=element_blank())
+```
+7. What else do you find interesting in the dataset? Show your exploratory analysis.
+```{r}
+g <- ggplot(ChickWeight, aes(x = Time, y = weight, colour = Diet, group = Chick))
+g <- g + geom_point()
+g <- g + facet_grid(. ~ Diet) + geom_smooth(method=lm, se=FALSE, fullrange=TRUE)
+g
+```
+This graph shows that the slope for Chicks on diet 3 seem to be steeper than the others, especially diet 1. This shows that diet one might not be the way to go, and that the other 3 are probably better options. 
+```{r}
+ggplot(weightgain, aes(x=reorder(Chick, weightgain), y=weightgain)) + geom_point() + facet_wrap(~Time) 
+```
+This graph shows the weight gain over time, and you can see the complete tranisition from 0 weight gain at day 0 to a linear looking graph that shows the spread of weight gain over the 21 days.
+```{r}
+ggplot(weightgain, aes(weightgain)) + geom_histogram(binwidth=15) + facet_wrap(~Time)
+```
+This histogram of weight gain, facet wrapped by time, shows that the weight gain turns into a bell shap looking histogram around day 16.
